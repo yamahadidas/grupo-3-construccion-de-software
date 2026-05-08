@@ -2,7 +2,7 @@
 
 ## Contexto
 
-La aplicación está destinada a estudiantes, docentes y personal administrativo de una institución académica. Los usuarios necesitan consultar el calendario académico —con sus períodos de actividades, plazos, evaluaciones y eventos institucionales— de forma rápida y visual, sin tener que interpretar documentos estáticos (PDF, tablas) o navegar por sistemas internos complejos. La información fuente reside en una hoja de cálculo de Google Sheets administrada por personal de la institución, que se actualiza continuamente a lo largo del año académico.
+Un calendario académico es un documento que muestra las actividades de una universidad. Se presenta al inicio del año y detalla los procesos que se realizarán durante ese periodo, permitiendo que tanto alumnos como profesores revisen las fechas de las actividades y procesos programados.
 
 ## Problema u oportunidad
 
