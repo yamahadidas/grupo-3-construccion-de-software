@@ -38,9 +38,9 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 1.1 | Diseñar mockup de la vista timeline | 2 | — | 1 | no comenzado |
+| 1.1 | Diseñar mockup de la vista timeline | 2 | @cata-mora | 1 | no comenzado |
 | 1.2 | Implementar componente `Timeline` con Chakra UI | 4 | — | 1 | no comenzado |
-| 1.3 | Conectar Google Sheets API desde Route Handler | 3 | — | 1 | no comenzado |
+| 1.3 | Conectar Google Sheets API desde Route Handler | 3 | @cata-mora | 1 | no comenzado |
 | 1.4 | Renderizar eventos como barras con fecha inicio/fin | 3 | — | 1 | no comenzado |
 
 ---
@@ -51,7 +51,7 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 |:---:|:---|:---:|:---:|:---:|:---:|
 | 2.1 | Extraer tags únicos dinámicamente desde los datos | 1 | — | 2 | no comenzado |
 | 2.2 | Implementar componente `TagFilter` con Chakra UI | 2 | — | 2 | no comenzado |
-| 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | — | 2 | no comenzado |
+| 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | @cata-mora | 2 | no comenzado |
 | 2.4 | Persistir selección de tags en URL (query params) | 1.5 | — | 2 | no comenzado |
 
 ---
@@ -62,7 +62,7 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 |:---:|:---|:---:|:---:|:---:|:---:|
 | 3.1 | Definir estructura de columnas del Sheet y validarla | 1 | — | 1 | no comenzado |
 | 3.2 | Documentar instrucciones de uso del Sheet para admins | 1 | — | 2 | no comenzado |
-| 3.3 | Implementar revalidación periódica o on-demand en Next.js | 2 | — | 2 | no comenzado |
+| 3.3 | Implementar revalidación periódica o on-demand en Next.js | 2 | @cata-mora | 2 | no comenzado |
 
 ## Tecnologías
 
