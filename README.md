@@ -33,14 +33,15 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 | `color`         | Color opcional en hex (ej: `#3B82F6`)            |
 
 ## Historias de Usuario
+
 **[HU1] COMO** usuario **QUIERO** ver todos los períodos y eventos del calendario académico en una línea de tiempo **PARA** entender de un vistazo qué actividades ocurren y cuándo.
 
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 1.1 | Diseñar mockup de la vista timeline | 2 | @cata-mora | 1 | no comenzado |
-| 1.2 | Implementar componente `Timeline` con Chakra UI | 4 | @nrnicolas02 | 1 | no comenzado |
-| 1.3 | Conectar Google Sheets API desde Route Handler | 3 | @cata-mora | 1 | no comenzado |
-| 1.4 | Renderizar eventos como barras con fecha inicio/fin | 3 | @yamahadidas | 1 | no comenzado |
+| 1.1 | Diseñar mockup de la vista timeline | 2 | Catalina | 1 | no comenzado |
+| 1.2 | Implementar componente `Timeline` con Chakra UI | 4 | Nicolás | 1 | no comenzado |
+| 1.3 | Conectar Google Sheets API desde Route Handler | 3 | Catalina | 1 | no comenzado |
+| 1.4 | Renderizar eventos como barras con fecha inicio/fin | 3 | Fernando | 1 | no comenzado |
 
 ---
 
@@ -48,10 +49,10 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 2.1 | Extraer tags únicos dinámicamente desde los datos | 1 | @nrnicolas02 | 2 | no comenzado |
-| 2.2 | Implementar componente `TagFilter` con Chakra UI | 2 | @yamahadidas | 2 | no comenzado |
-| 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | @cata-mora | 2 | no comenzado |
-| 2.4 | Persistir selección de tags en URL (query params) | 1.5 | @nrnicolas02 | 2 | no comenzado |
+| 2.1 | Extraer tags únicos dinámicamente desde los datos | 1 | Nicolás | 2 | no comenzado |
+| 2.2 | Implementar componente `TagFilter` con Chakra UI | 2 | Fernando | 2 | no comenzado |
+| 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | Catalina | 2 | no comenzado |
+| 2.4 | Persistir selección de tags en URL (query params) | 1.5 | Nicolás | 2 | no comenzado |
 
 ---
 
@@ -59,9 +60,9 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 3.1 | Definir estructura de columnas del Sheet y validarla | 1 | @yamahadidas | 1 | no comenzado |
-| 3.2 | Documentar instrucciones de uso del Sheet para admins | 1 | @nrnicolas02 | 2 | no comenzado |
-| 3.3 | Implementar revalidación periódica o on-demand en Next.js | 2 | @cata-mora | 2 | no comenzado |
+| 3.1 | Definir estructura de columnas del Sheet y validarla | 1 | Fernando | 1 | no comenzado |
+| 3.2 | Documentar instrucciones de uso del Sheet para admins | 1 | Nicolás | 2 | no comenzado |
+| 3.3 | Implementar revalidación periódica o on-demand en Next.js | 2 | Catalina | 2 | no comenzado |
 
 ## Tecnologías
 
