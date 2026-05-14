@@ -38,7 +38,7 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 1.1 | Diseñar mockup de la vista timeline | 2 | Catalina | 1 | no comenzado |
+| 1.1 | Diseñar mockup de la vista timeline | 2 | Catalina | 1 | Finalizado |
 | 1.2 | Implementar componente `Timeline` con Chakra UI | 4 | Nicolás | 1 | no comenzado |
 | 1.3 | Conectar Google Sheets API desde Route Handler | 3 | Catalina | 1 | no comenzado |
 | 1.4 | Renderizar eventos como barras con fecha inicio/fin | 3 | Fernando | 1 | no comenzado |
@@ -63,6 +63,12 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 | 3.1 | Definir estructura de columnas del Sheet y validarla | 1 | Fernando | 1 | no comenzado |
 | 3.2 | Documentar instrucciones de uso del Sheet para admins | 1 | Nicolás | 2 | no comenzado |
 | 3.3 | Implementar revalidación periódica o on-demand en Next.js | 2 | Catalina | 2 | no comenzado |
+
+## Mockup
+A continuación se presenta el mockup del sitio web, señalando el caso donde el usuario seleccione dos tags y esten sobrepuestos.
+
+<img width="2743" height="3097" alt="TimeLine(1)" src="https://github.com/user-attachments/assets/f2517ac1-85e2-49b6-ae16-d66eba3304e0" />
+
 
 ## Tecnologías
 
