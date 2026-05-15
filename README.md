@@ -12,7 +12,7 @@ Los calendarios académicos tradicionales se publican como PDFs o listas planas,
 
 **Calendario Académico Interactivo** es una aplicación web construida con Next.js y Chakra UI que consume datos de un Google Sheet para representar visualmente los eventos y períodos del calendario académico de la institución.
 
-La interfaz principal es una **línea de tiempo horizontal** donde cada evento aparece como una barra que se extiende entre su fecha de inicio y su fecha de término. Los eventos están organizados por categorías mediante un **sistema de tags dinámico**: cada evento en Google Sheets tiene uno o más tags asociados (por ejemplo: `Docencia`, `Evaluaciones`, `Inscripciones`, `Feriados`, `Postgrado`). La aplicación detecta automáticamente los tags presentes en los datos y genera los controles de filtro sin requerir configuración previa.
+La interfaz principal es una **línea de tiempo vertical** donde cada evento aparece como una barra que se extiende entre su fecha de inicio y su fecha de término. Los eventos están organizados por categorías mediante un **sistema de tags dinámico**: cada evento en Google Sheets tiene uno o más tags asociados (por ejemplo: `Docencia`, `Evaluaciones`, `Inscripciones`, `Feriados`, `Postgrado`). La aplicación detecta automáticamente los tags presentes en los datos y genera los controles de filtro sin requerir configuración previa.
 
 Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo real mostrando únicamente los eventos que coincidan con los filtros activos. Esto permite a cada usuario construir una vista personalizada del calendario según su rol e intereses.
 
