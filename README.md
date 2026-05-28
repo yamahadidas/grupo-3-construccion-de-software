@@ -12,9 +12,9 @@ Los calendarios académicos tradicionales se publican como PDFs o listas planas,
 
 **Calendario Académico Interactivo** es una aplicación web construida con Next.js y Chakra UI que consume datos de un Google Sheet para representar visualmente los eventos y períodos del calendario académico de la institución.
 
-La interfaz principal es una **línea de tiempo vertical** donde cada evento aparece como una barra que se extiende entre su fecha de inicio y su fecha de término. Los eventos están organizados por categorías mediante un **sistema de tags dinámico**: cada evento en Google Sheets tiene uno o más tags asociados. La aplicación detecta automáticamente los tags presentes en los datos y genera los controles de filtro sin requerir configuración previa.
+La interfaz principal es una **línea de tiempo vertical** donde cada evento aparece como una barra que se extiende entre su fecha de inicio y su fecha de término. Los eventos están organizados por `categoria` y `etapa`, y la aplicación genera los controles de filtro dinámicamente a partir de los valores presentes en los datos, sin requerir configuración previa.
 
-Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo real mostrando únicamente los eventos que coincidan con los filtros activos. Esto permite a cada usuario construir una vista personalizada del calendario según su rol e intereses.
+Al seleccionar o deseleccionar categorías y etapas, la línea de tiempo se actualiza en tiempo real mostrando únicamente los eventos que coincidan con los filtros activos. Esto permite a cada usuario construir una vista personalizada del calendario según su rol e intereses.
 
 ## Arquitectura técnica
 
@@ -32,12 +32,8 @@ Al seleccionar o deseleccionar tags, la línea de tiempo se actualiza en tiempo 
 | `nombre`       | texto     | Nombre corto del evento o período                                           |
 | `descripcion`  | texto     | Descripción completa del evento                                             |
 | `fecha_inicio` | fecha     | Fecha de inicio en formato `DD/MM/YYYY`                                     |
-| `fecha_termino`| fecha     | Fecha de término en formato `DD/MM/YYYY`. Vacío si `es_puntual` es `TRUE`  |
-| `es_puntual`   | booleano  | `TRUE` si el evento ocurre en un solo día                                   |
-| `es_feriado`   | booleano  | `TRUE` si corresponde a un feriado o día no laborable                       |
+| `fecha_termino`| fecha     | Fecha de término en formato `DD/MM/YYYY`. Vacío si el evento es puntual    |
 | `url`          | texto     | URL de acción relacionada al evento (opcional)                              |
-| `tags`         | texto     | Lista de tags separados por coma, usados para filtrado en la interfaz       |
-| `visible_web`  | booleano  | `TRUE` si el evento debe mostrarse en la web pública. `FALSE` para eventos internos de gestión |
 
 ### Hoja `categorias`
 
@@ -73,14 +69,14 @@ Referencia de etapas con etiqueta legible.
 
 ---
 
-**[HU2] COMO** usuario **QUIERO** filtrar los eventos del calendario por tags **PARA** ver solo la información relevante para mi rol o interés.
+**[HU2] COMO** usuario **QUIERO** filtrar los eventos del calendario por categoría y etapa **PARA** ver solo la información relevante para mi rol o interés.
 
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 2.1 | Extraer tags únicos dinámicamente desde los datos | 1 | Nicolás | 2 | No comenzado |
-| 2.2 | Implementar componente `TagFilter` con Chakra UI | 2 | Fernando | 2 | No comenzado |
+| 2.1 | Extraer categorías y etapas únicas dinámicamente desde los datos | 1 | Nicolás | 2 | No comenzado |
+| 2.2 | Implementar componente `FilterPanel` con Chakra UI | 2 | Fernando | 2 | No comenzado |
 | 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | Catalina | 2 | No comenzado |
-| 2.4 | Persistir selección de tags en URL (query params) | 1.5 | Nicolás | 2 | No comenzado |
+| 2.4 | Persistir selección de filtros en URL (query params) | 1.5 | Nicolás | 2 | No comenzado |
 
 ---
 
@@ -94,7 +90,7 @@ Referencia de etapas con etiqueta legible.
 
 ## Mockup
 
-A continuación se presenta el mockup del sitio web, señalando el caso donde el usuario seleccione dos tags y estén sobrepuestos.
+A continuación se presenta el mockup del sitio web, señalando el caso donde el usuario seleccione dos filtros y estén sobrepuestos.
 
 <img width="2743" height="3097" alt="TimeLine(1)" src="https://github.com/user-attachments/assets/f2517ac1-85e2-49b6-ae16-d66eba3304e0" />
 
