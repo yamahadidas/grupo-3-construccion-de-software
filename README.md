@@ -12,9 +12,9 @@ Los calendarios académicos tradicionales se publican como PDFs o listas planas,
 
 **Calendario Académico Interactivo** es una aplicación web construida con Next.js y Chakra UI que consume datos de un Google Sheet para representar visualmente los eventos y períodos del calendario académico de la institución.
 
-La interfaz principal es una **línea de tiempo vertical** donde cada evento aparece como una barra que se extiende entre su fecha de inicio y su fecha de término. Los eventos están organizados por `categoria` y `etapa`, y la aplicación genera los controles de filtro dinámicamente a partir de los valores presentes en los datos, sin requerir configuración previa.
+La interfaz principal es una **línea de tiempo vertical** donde cada evento aparece como una barra que se extiende entre su fecha de inicio y su fecha de término. Los eventos están organizados en las mismas categorías del calendario oficial: Calendario Académico, Movilidad Estudiantil, Beneficios Estudiantiles y DACIC. Los feriados se destacan visualmente de forma independiente.
 
-Al seleccionar o deseleccionar categorías y etapas, la línea de tiempo se actualiza en tiempo real mostrando únicamente los eventos que coincidan con los filtros activos. Esto permite a cada usuario construir una vista personalizada del calendario según su rol e intereses.
+Al seleccionar o deseleccionar categorías, la línea de tiempo se actualiza en tiempo real mostrando únicamente los eventos que coincidan con los filtros activos.
 
 ## Arquitectura técnica
 
@@ -25,36 +25,28 @@ Al seleccionar o deseleccionar categorías y etapas, la línea de tiempo se actu
 
 ### Estructura de columnas del Google Sheet
 
-| columna        | tipo      | descripción                                                                 |
-|----------------|-----------|-----------------------------------------------------------------------------|
-| `categoria`    | texto     | Categoría del evento: `estudiante`, `docente`, `escuela`, `comunidad`, `admision_2026`, `movilidad`, `dacic` |
-| `etapa`        | texto     | Etapa del proceso: `academico`, `matricula`, `beneficios`, `movilidad`, `titulacion`, `feriados` |
-| `nombre`       | texto     | Nombre corto del evento o período                                           |
-| `descripcion`  | texto     | Descripción completa del evento                                             |
-| `fecha_inicio` | fecha     | Fecha de inicio en formato `DD/MM/YYYY`                                     |
-| `fecha_termino`| fecha     | Fecha de término en formato `DD/MM/YYYY`. Vacío si el evento es puntual    |
-| `url`          | texto     | URL de acción relacionada al evento (opcional)                              |
+#### Hoja `eventos`
 
-### Hoja `categorias`
+| columna         | tipo  | descripción                                                                 |
+|-----------------|-------|-----------------------------------------------------------------------------|
+| `categoria`     | texto | Categoría del evento: `academico`, `movilidad`, `beneficios`, `dacic`, `feriado` |
+| `nombre`        | texto | Nombre corto del evento o período                                           |
+| `descripcion`   | texto | Descripción completa del evento                                             |
+| `fecha_inicio`  | fecha | Fecha de inicio en formato `DD/MM/YYYY`                                     |
+| `fecha_termino` | fecha | Fecha de término en formato `DD/MM/YYYY`. Vacío si el evento es puntual    |
+| `url`           | texto | URL de acción relacionada al evento (opcional)                              |
 
-Referencia de categorías con etiqueta legible y color asociado.
+Las filas con `categoria = feriado` están destacadas con fondo amarillo en el Sheet para identificación visual rápida del administrador.
 
-| columna          | descripción                        |
-|------------------|------------------------------------|
-| `id_categoria`   | Identificador (coincide con `categoria` en la hoja `eventos`) |
-| `label`          | Nombre legible para mostrar en UI  |
-| `color_hex`      | Color en formato hex (ej: `#2196F3`) |
-| `descripcion`    | Descripción de la categoría        |
+#### Hoja `categorias`
 
-### Hoja `etapas`
+Referencia de categorías con etiqueta legible y color para la UI.
 
-Referencia de etapas con etiqueta legible.
-
-| columna      | descripción                        |
-|--------------|------------------------------------|
-| `id_etapa`   | Identificador (coincide con `etapa` en la hoja `eventos`) |
-| `label`      | Nombre legible para mostrar en UI  |
-| `descripcion`| Descripción de la etapa            |
+| columna        | descripción                                                      |
+|----------------|------------------------------------------------------------------|
+| `id_categoria` | Identificador (coincide con `categoria` en la hoja `eventos`)   |
+| `label`        | Nombre legible para mostrar en la interfaz                       |
+| `color_hex`    | Color en formato hex usado para renderizar la categoría en la UI |
 
 ## Historias de Usuario
 
@@ -69,11 +61,11 @@ Referencia de etapas con etiqueta legible.
 
 ---
 
-**[HU2] COMO** usuario **QUIERO** filtrar los eventos del calendario por categoría y etapa **PARA** ver solo la información relevante para mi rol o interés.
+**[HU2] COMO** usuario **QUIERO** filtrar los eventos del calendario por categoría **PARA** ver solo la información relevante para mi interés.
 
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
-| 2.1 | Extraer categorías y etapas únicas dinámicamente desde los datos | 1 | Nicolás | 2 | No comenzado |
+| 2.1 | Extraer categorías únicas dinámicamente desde los datos | 1 | Nicolás | 2 | No comenzado |
 | 2.2 | Implementar componente `FilterPanel` con Chakra UI | 2 | Fernando | 2 | No comenzado |
 | 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | Catalina | 2 | No comenzado |
 | 2.4 | Persistir selección de filtros en URL (query params) | 1.5 | Nicolás | 2 | No comenzado |
