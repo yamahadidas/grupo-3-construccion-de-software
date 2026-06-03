@@ -5,7 +5,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #ffffff;
     --foreground: #ededed;
   }
 }
@@ -22,7 +22,7 @@ body {
 
 body {
   min-height: 100%;
-  display: flex;
+  display: Container;
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
