@@ -55,9 +55,9 @@ Referencia de categorías con etiqueta legible y color para la UI.
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
 | 1.1 | Diseñar mockup de la vista timeline | 2 | Catalina | 1 | Finalizado |
-| 1.2 | Implementar componente `Timeline` con Chakra UI | 4 | Nicolás | 1 | No comenzado |
-| 1.3 | Conectar Google Sheets API desde Route Handler | 3 | Catalina | 1 | No comenzado |
-| 1.4 | Renderizar eventos como barras con fecha inicio/fin | 3 | Fernando | 1 | No comenzado |
+| 1.2 | Implementar componente `Timeline` con Chakra UI | 4 | Nicolás | 1 | Finalizado |
+| 1.3 | Conectar Google Sheets API desde Route Handler | 3 | Catalina | 1 | Finalizado |
+| 1.4 | Renderizar eventos como barras con fecha inicio/fin | 3 | Fernando | 1 | En proceso |
 
 ---
 
@@ -66,8 +66,8 @@ Referencia de categorías con etiqueta legible y color para la UI.
 | id  | descripción | estimación (hrs) | responsable | sprint | estado |
 |:---:|:---|:---:|:---:|:---:|:---:|
 | 2.1 | Extraer categorías únicas dinámicamente desde los datos | 1 | Nicolás | 2 | No comenzado |
-| 2.2 | Implementar componente `FilterPanel` con Chakra UI | 2 | Fernando | 2 | No comenzado |
-| 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | Catalina | 2 | No comenzado |
+| 2.2 | Implementar componente `FilterPanel` con Chakra UI | 2 | Fernando | 2 | En proceso |
+| 2.3 | Conectar filtros al estado global y actualizar timeline | 2 | Catalina | 2 | En proceso |
 | 2.4 | Persistir selección de filtros en URL (query params) | 1.5 | Nicolás | 2 | No comenzado |
 
 ---
