@@ -24,6 +24,11 @@ function parseFecha(str) {
 }
 
 function rowToEvento(row, index) {
+  // Columnas: A=categoria B=nombre C=descripcion D=fecha_inicio E=fecha_termino F=url G=tag1 H=tag2 I=tag3
+  const tags = [row[6], row[7], row[8]]
+    .map((t) => t?.trim())
+    .filter(Boolean);
+
   return {
     id: index + 2,
     categoria: row[0]?.trim() ?? "",
@@ -32,6 +37,7 @@ function rowToEvento(row, index) {
     fecha_inicio: parseFecha(row[3]),
     fecha_termino: parseFecha(row[4]) ?? null,
     url: row[5]?.trim() ?? null,
+    tags,
   };
 }
 
@@ -46,7 +52,7 @@ function rowToCategoria(row) {
 async function readEventos(sheets) {
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.SPREADSHEET_ID,
-    range: `${SHEET_EVENTOS}!A2:F`,
+    range: `${SHEET_EVENTOS}!A2:I`, // extendido hasta columna I para incluir tag1, tag2, tag3
   });
   const rows = res.data.values ?? [];
   return rows
