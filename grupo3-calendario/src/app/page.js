@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 import { Slider, HStack, Stack, VStack, Box, Grid, GridItem } from "@chakra-ui/react"
 import { Checkbox, CheckboxGroup, Fieldset, For, Card, Heading, Flex, Text } from "@chakra-ui/react"
 
