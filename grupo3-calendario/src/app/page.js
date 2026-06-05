@@ -1,6 +1,6 @@
 "use client";
 export const dynamic = "force-dynamic";
-import { Slider, HStack, Stack, VStack, Box, Grid, GridItem } from "@chakra-ui/react"
+import { Slider, HStack, Stack, VStack, Box, Grid, GridItem, Image } from "@chakra-ui/react"
 import { Checkbox, CheckboxGroup, Fieldset, For, Card, Heading, Flex, Text } from "@chakra-ui/react"
 
 
@@ -36,7 +36,7 @@ export default function Home() {
         >
         <Flex justify="center" align="center" h="100%">
           <Text textStyle="5xl" fontWeight="semibold" color="black">
-            ¡ ¡ ¡ Timeline G3 ! ! !
+            ¡ Timeline G3 !
           </Text>
         </Flex>
           
