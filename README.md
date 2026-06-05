@@ -92,3 +92,4 @@ A continuación se presenta el mockup del sitio web, señalando el caso donde el
 - [Chakra UI v3](https://chakra-ui.com/) — sistema de componentes UI
 - [Google Sheets API v4](https://developers.google.com/sheets/api) — fuente de datos
 - [pnpm](https://pnpm.io/) — gestor de paquetes
+
