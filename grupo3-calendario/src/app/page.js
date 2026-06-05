@@ -1,6 +1,11 @@
 "use client";
 import { Slider, HStack, Stack, VStack, Box, Grid, GridItem } from "@chakra-ui/react"
-import { Checkbox, CheckboxGroup, Fieldset, For, Card, Heading } from "@chakra-ui/react"
+import { Checkbox, CheckboxGroup, Fieldset, For, Card, Heading, Flex, Text } from "@chakra-ui/react"
+
+
+
+
+
 
 const mes = [
   { value: 100, label: "Enero" },
@@ -22,21 +27,32 @@ export default function Home() {
     <VStack gap={4} p={6} w="100%" minH="100vh" bg="gray.50" align="stretch">
       {/* SECCIÓN SUPERIOR */}
       <Box 
+
         h="120px" 
         w="100%" 
         bg="white"
-      >
-        {/* Codigo */}
         
+        >
+        <Flex justify="center" align="center" h="100%">
+          <Text textStyle="5xl" fontWeight="semibold" color="black">
+            ¡ ¡ ¡ Timeline G3 ! ! !
+          </Text>
+        </Flex>
+          
+
       </Box>
-      
+
+
       {/* SECCIÓN INFERIOR */}
 
+      
       <Grid 
         templateColumns="1fr 1fr 6fr" // Los numeros que acompañan al fr cunto espacio ovupara cada columna
         gap={4} 
         w="100%"
         flex="1" // Hace que el grid ocupe todo el espacio vertical restante
+
+      
       >
         {/* columnas categorias */}
         <GridItem 
