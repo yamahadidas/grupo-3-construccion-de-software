@@ -108,3 +108,25 @@ export async function GET() {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function POST(request) {
+  try {
+    const datosDelClic = await request.json();
+
+    // Vercel lee la IP pública del usuario en los headers
+    const ipUsuario = request.headers.get("x-forwarded-for") || "127.0.0.1";
+
+    const logCompleto = {
+      ...datosDelClic,
+      ip: ipUsuario.split(',')[0].trim()
+    };
+
+    // Imprime el log de clics en tu terminal de Linux
+    console.log("💾 [CLIC DETECTADO EN EL SERVIDOR]:", logCompleto);
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[POST /api/events]", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
