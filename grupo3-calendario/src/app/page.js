@@ -38,16 +38,75 @@ function getAllTags(eventos) {
   return Array.from(set).sort();
 }
 
-// Distribuye eventos en columnas para evitar solapamiento visual
-function assignLanes(events) {
-  const laneEnds = [];
-  return events.map(ev => {
-    let lane = laneEnds.findIndex(end => end <= ev._startFrac - 0.002);
-    if (lane === -1) lane = laneEnds.length;
-    if (lane > 5) lane = 5;
-    laneEnds[lane] = ev._endFrac;
-    return { ...ev, _lane: lane };
+// Normaliza un string para comparar categorías sin que importen mayúsculas,
+// tildes o espacios extra (errores típicos de tipeo en la hoja de cálculo).
+function normalizeKey(str) {
+  return (str ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+// Distribuye eventos en carriles. Cada categoría tiene su propia columna fija
+// (en el orden definido en la hoja "categorias"), así el color de una
+// categoría siempre aparece en la misma posición horizontal. Solo se abre un
+// sub-carril adicional dentro de una columna cuando DOS eventos de la MISMA
+// categoría se solapan en el tiempo (caso raro). Esto reemplaza el packing
+// genérico anterior, que mezclaba categorías en carriles compartidos y, al
+// limitar a un máximo de 6 carriles, forzaba a varios eventos a ocupar el
+// mismo carril y dibujarse unos encima de otros.
+function assignLanes(events, categoryOrder) {
+  const byCategory = new Map();
+  events.forEach(ev => {
+    if (!byCategory.has(ev.categoria)) byCategory.set(ev.categoria, []);
+    byCategory.get(ev.categoria).push(ev);
   });
+
+  const known = categoryOrder.filter(id => byCategory.has(id));
+  const unknown = [...byCategory.keys()].filter(id => !categoryOrder.includes(id));
+  const orderedCats = [...known, ...unknown];
+
+  let colOffset = 0;
+  const result = [];
+  const colOffsetByCat = {};
+  const subLanesByCat = {};
+
+  orderedCats.forEach(cat => {
+    const evs = byCategory.get(cat).slice().sort((a, b) => a._startFrac - b._startFrac);
+    const laneEnds = [];
+    evs.forEach(ev => {
+      let lane = laneEnds.findIndex(end => end <= ev._startFrac - 0.002);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = ev._endFrac;
+      result.push({ ...ev, _lane: colOffset + lane });
+    });
+    colOffsetByCat[cat] = colOffset;
+    subLanesByCat[cat] = Math.max(1, laneEnds.length);
+    colOffset += subLanesByCat[cat];
+  });
+
+  return { events: result, totalLanes: Math.max(1, colOffset), orderedCats, colOffsetByCat, subLanesByCat };
+}
+
+// Cuando dos eventos puntuales (rombos) caen en fechas muy cercanas dentro del
+// mismo carril, sus textos quedan unos sobre otros. Esta función recorre los
+// eventos (ya ordenados por fecha) y, si el siguiente cae demasiado cerca en
+// píxeles del anterior dentro del mismo carril, lo empuja hacia abajo lo
+// mínimo necesario para que no se solapen.
+function staggerByLane(events, getLane, getRawTop, minGap) {
+  const lastBottom = {};
+  const tops = {};
+  events.forEach(ev => {
+    const lane = getLane(ev);
+    const raw = getRawTop(ev);
+    const prev = lastBottom[lane];
+    const top = prev !== undefined && raw < prev + minGap ? prev + minGap : raw;
+    tops[ev.id] = top;
+    lastBottom[lane] = top;
+  });
+  return tops;
 }
 
 // ─── Modal de evento ─────────────────────────────────────────────────────────
@@ -244,7 +303,8 @@ function FilterPanel({ categorias, activeCats, onToggleCat, allTags, activeTags,
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const PADDING_TOP = 16;
+const HEADER_H = 26;
+const PADDING_TOP = 16 + HEADER_H;
 const PADDING_BOTTOM = 16;
 const MONTH_LABEL_W = 44;
 const AXIS_W = 2;
@@ -286,7 +346,7 @@ function Timeline({ eventos, categorias, onEventClick }) {
   const fracToY = f => PADDING_TOP + f * usableH;
 
   // Procesar eventos
-  const { feriados, withLanes, usedLanes } = useMemo(() => {
+  const { feriados, withLanes, usedLanes, colOffsetByCat, subLanesByCat } = useMemo(() => {
     const processed = eventos
       .map(ev => {
         const start = parseLocalDate(ev.fecha_inicio) ?? parseLocalDate(ev.fecha_termino);
@@ -300,18 +360,49 @@ function Timeline({ eventos, categorias, onEventClick }) {
       .filter(Boolean)
       .sort((a,b) => a._startFrac - b._startFrac);
 
-    const feriados  = processed.filter(e => e.categoria === "feriado");
-    const normales  = processed.filter(e => e.categoria !== "feriado");
-    const withLanes = assignLanes(normales);
-    const usedLanes = Math.max(1, ...withLanes.map(e => e._lane + 1));
-    return { feriados, withLanes, usedLanes };
-  }, [eventos, catMap, yearStart, yearEnd]);
+    const feriados = processed.filter(e => e.categoria === "feriado");
+    const normales = processed.filter(e => e.categoria !== "feriado");
+    const categoryOrder = categorias.map(c => c.id).filter(id => id !== "feriado");
+    const { events: withLanes, totalLanes, colOffsetByCat, subLanesByCat } = assignLanes(normales, categoryOrder);
+    return { feriados, withLanes, usedLanes: totalLanes, colOffsetByCat, subLanesByCat };
+  }, [eventos, catMap, yearStart, yearEnd, categorias]);
 
-  const totalW = MONTH_LABEL_W + AXIS_W + FERIADO_W + LANE_W * Math.min(usedLanes, 6);
+  const totalW = MONTH_LABEL_W + AXIS_W + FERIADO_W + LANE_W * usedLanes;
+
+  // Posiciones ajustadas para que marcadores puntuales muy cercanos en fecha
+  // (dentro del mismo carril) no queden uno encima del otro.
+  const feriadoTops = useMemo(
+    () => staggerByLane(feriados, () => "feriado", ev => fracToY(ev._startFrac), 16),
+    [feriados, usableH]
+  );
+  const punctualTops = useMemo(() => {
+    const soloPuntuales = withLanes.filter(ev => fracToY(ev._endFrac) - fracToY(ev._startFrac) < 10);
+    return staggerByLane(soloPuntuales, ev => ev._lane, ev => fracToY(ev._startFrac), 16);
+  }, [withLanes, usableH]);
 
   return (
     <Box ref={containerRef} position="relative" w="100%" h="100%" overflowX="auto" overflowY="hidden">
       <Box position="relative" style={{ minWidth: totalW, height: "100%" }}>
+
+        {/* Encabezados de columna (una columna fija por categoría) */}
+        {Object.keys(colOffsetByCat).map(catId => {
+          const cat = catMap[catId];
+          const left = MONTH_LABEL_W + AXIS_W + FERIADO_W + colOffsetByCat[catId] * LANE_W;
+          const width = (subLanesByCat[catId] ?? 1) * LANE_W;
+          return (
+            <Box key={catId} position="absolute"
+                 style={{ left, width, top: 2, height: HEADER_H, zIndex: 4 }}
+                 display="flex" alignItems="center" justifyContent="center" gap="6px">
+              <Box w="7px" h="7px" borderRadius="2px" flexShrink={0}
+                   style={{ background: cat?.color || "#9CA3AF" }} />
+              <Text fontSize="10px" fontWeight="700" color="gray.500" letterSpacing="0.02em"
+                    style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                             maxWidth: width - 18, textTransform: "uppercase" }}>
+                {cat?.label || catId}
+              </Text>
+            </Box>
+          );
+        })}
 
         {/* Eje vertical */}
         <Box position="absolute" bg="gray.200" style={{
@@ -339,7 +430,7 @@ function Timeline({ eventos, categorias, onEventClick }) {
         {/* Feriados */}
         {feriados.map(ev => (
           <Box key={ev.id} position="absolute" display="flex" alignItems="center" gap="4px"
-               style={{ top: fracToY(ev._startFrac) - 6, left: MONTH_LABEL_W + AXIS_W + 4,
+               style={{ top: (feriadoTops[ev.id] ?? fracToY(ev._startFrac)) - 6, left: MONTH_LABEL_W + AXIS_W + 4,
                         cursor: "pointer", zIndex: 3 }}
                onClick={() => onEventClick(ev)} title={ev.nombre}>
             <Box w="8px" h="8px" bg="yellow.400" borderRadius="full" flexShrink={0}
@@ -360,9 +451,10 @@ function Timeline({ eventos, categorias, onEventClick }) {
           const isPunctual = height < 10;
 
           if (isPunctual) {
+            const adjTop = punctualTops[ev.id] ?? top;
             return (
               <Box key={ev.id} position="absolute" display="flex" alignItems="center"
-                   style={{ top: top - 6, left, width: LANE_W - 4, cursor: "pointer", zIndex: 2 }}
+                   style={{ top: adjTop - 6, left, width: LANE_W - 4, cursor: "pointer", zIndex: 2 }}
                    onClick={() => onEventClick(ev)} title={ev.nombre}>
                 <Box w="11px" h="11px" bg={ev._color} flexShrink={0}
                      style={{ transform: "rotate(45deg)", borderRadius: 2,
@@ -455,17 +547,41 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  const allTags = useMemo(() => getAllTags(eventos), [eventos]);
+  // Reconcilia ev.categoria con los id reales de la hoja "categorias".
+  // Si en la hoja "eventos" alguien tipeó la categoría con mayúsculas, tildes
+  // o espacios distintos a como está en la hoja "categorias", antes quedaba
+  // como una categoría "desconocida" (columna propia, sin color ni nombre
+  // reconocido). Acá se corrige automáticamente comparando versiones
+  // normalizadas, y se avisa por consola para que se pueda arreglar en la
+  // fuente (Google Sheets) si corresponde.
+  const eventosNormalizados = useMemo(() => {
+    if (!categorias.length) return eventos;
+    const porIdNormalizado = new Map(categorias.map(c => [normalizeKey(c.id), c.id]));
+    return eventos.map(ev => {
+      const canon = porIdNormalizado.get(normalizeKey(ev.categoria));
+      if (!canon) {
+        console.warn(`[calendario] categoría "${ev.categoria}" (evento "${ev.nombre}") no coincide con ninguna categoría definida en la hoja "categorias".`);
+        return ev;
+      }
+      if (canon !== ev.categoria) {
+        console.warn(`[calendario] categoría "${ev.categoria}" normalizada a "${canon}" (evento "${ev.nombre}").`);
+        return { ...ev, categoria: canon };
+      }
+      return ev;
+    });
+  }, [eventos, categorias]);
+
+  const allTags = useMemo(() => getAllTags(eventosNormalizados), [eventosNormalizados]);
   const catMap  = useMemo(() => Object.fromEntries(categorias.map(c => [c.id, c])), [categorias]);
 
   const filtered = useMemo(() => {
-    if (!activeCats.size && !activeTags.size) return eventos;
-    return eventos.filter(ev => {
+    if (!activeCats.size && !activeTags.size) return eventosNormalizados;
+    return eventosNormalizados.filter(ev => {
       const catOk = !activeCats.size || activeCats.has(ev.categoria);
       const tagOk = !activeTags.size || (ev.tags ?? []).some(t => activeTags.has(t));
       return catOk && tagOk;
     });
-  }, [eventos, activeCats, activeTags]);
+  }, [eventosNormalizados, activeCats, activeTags]);
 
   const toggleCat = useCallback(id => setActiveCats(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
   const toggleTag = useCallback(t  => setActiveTags(p => { const n = new Set(p); n.has(t)  ? n.delete(t)  : n.add(t);  return n; }), []);
