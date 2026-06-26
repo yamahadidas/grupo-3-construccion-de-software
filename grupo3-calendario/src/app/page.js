@@ -538,6 +538,7 @@ export default function Home() {
   const [activeCats, setActiveCats] = useState(new Set());
   const [activeTags, setActiveTags] = useState(new Set());
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/events")
@@ -634,11 +635,32 @@ export default function Home() {
           <Text fontSize="13px" color="gray.400" textAlign="center">{error}</Text>
         </Flex>
       ) : (
-        <Flex flex="1" overflow="hidden">
+<Flex flex="1" overflow="hidden" position="relative">
 
-          {/* Sidebar */}
-          <Box w="280px" flexShrink={0} overflowY="auto" p="20px" bg="gray.50"
-               style={{ borderRight: "1px solid #F3F4F6" }}>
+          {/* 🌸 Zona invisible para detectar el mouse y ABRIR el menú */}
+          <Box 
+            position="absolute" left="0" top="0" bottom="0" w="24px" zIndex="150"
+            onMouseEnter={() => setIsSidebarOpen(true)}
+            display={isSidebarOpen ? "none" : "block"} 
+            style={{ cursor: "e-resize" }}
+          />
+
+          {/* 🌸 Sidebar Desplegable (flota por encima del calendario) */}
+          <Box 
+            position="absolute"
+            top="0" bottom="0"
+            // Si está abierto su posición es 0 (visible), si está cerrado se esconde a -280px
+            left={isSidebarOpen ? "0" : "-280px"} 
+            w="280px" flexShrink={0} overflowY="auto" p="20px" bg="gray.50"
+            zIndex="200"
+            transition="left 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s"
+            style={{ 
+              borderRight: "1px solid #F3F4F6", 
+              boxShadow: isSidebarOpen ? "5px 0 25px rgba(0,0,0,0.1)" : "none" 
+            }}
+            // Cuando el mouse sale de este contenedor, se cierra
+            onMouseLeave={() => setIsSidebarOpen(false)}
+          >
             <FilterPanel
               categorias={categorias} activeCats={activeCats} onToggleCat={toggleCat}
               allTags={allTags}       activeTags={activeTags} onToggleTag={toggleTag}
@@ -676,8 +698,8 @@ export default function Home() {
             )}
           </Box>
 
-          {/* Timeline */}
-          <Box flex="1" overflow="hidden" position="relative">
+          {/* 🌸 Timeline (ahora ocupa toooodo el espacio disponible) */}
+          <Box flex="1" w="100%" overflow="hidden" position="relative">
             {filtered.length === 0 ? (
               <Flex flex="1" h="100%" direction="column" align="center" justify="center" gap="12px">
                 <Text fontSize="36px">🔍</Text>
@@ -685,11 +707,13 @@ export default function Home() {
                 <Text fontSize="13px" color="gray.400">Ajusta los filtros para ver más eventos.</Text>
               </Flex>
             ) : (
-              <Box h="100%" px="24px" py="20px">
+              // Le agregamos un padding a la izquierda para que el contenido no quede tan pegado al borde cuando el menú esté cerrado
+              <Box h="100%" pl="32px" pr="24px" py="20px">
                 <Timeline eventos={filtered} categorias={categorias} onEventClick={setSelectedEvent} />
               </Box>
             )}
           </Box>
+
         </Flex>
       )}
 
