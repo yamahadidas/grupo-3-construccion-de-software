@@ -49,45 +49,24 @@ function normalizeKey(str) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-// Distribuye eventos en carriles. Cada categoría tiene su propia columna fija
-// (en el orden definido en la hoja "categorias"), así el color de una
-// categoría siempre aparece en la misma posición horizontal. Solo se abre un
-// sub-carril adicional dentro de una columna cuando DOS eventos de la MISMA
-// categoría se solapan en el tiempo (caso raro). Esto reemplaza el packing
-// genérico anterior, que mezclaba categorías en carriles compartidos y, al
-// limitar a un máximo de 6 carriles, forzaba a varios eventos a ocupar el
-// mismo carril y dibujarse unos encima de otros.
+// Distribuye eventos en carriles optimizando el espacio.
+// Coloca cada evento en el primer carril disponible sin importar su categoría.
 function assignLanes(events, categoryOrder) {
-  const byCategory = new Map();
-  events.forEach(ev => {
-    if (!byCategory.has(ev.categoria)) byCategory.set(ev.categoria, []);
-    byCategory.get(ev.categoria).push(ev);
-  });
-
-  const known = categoryOrder.filter(id => byCategory.has(id));
-  const unknown = [...byCategory.keys()].filter(id => !categoryOrder.includes(id));
-  const orderedCats = [...known, ...unknown];
-
-  let colOffset = 0;
   const result = [];
-  const colOffsetByCat = {};
-  const subLanesByCat = {};
+  const laneEnds = [];
 
-  orderedCats.forEach(cat => {
-    const evs = byCategory.get(cat).slice().sort((a, b) => a._startFrac - b._startFrac);
-    const laneEnds = [];
-    evs.forEach(ev => {
-      let lane = laneEnds.findIndex(end => end <= ev._startFrac - 0.002);
-      if (lane === -1) lane = laneEnds.length;
-      laneEnds[lane] = ev._endFrac;
-      result.push({ ...ev, _lane: colOffset + lane });
-    });
-    colOffsetByCat[cat] = colOffset;
-    subLanesByCat[cat] = Math.max(1, laneEnds.length);
-    colOffset += subLanesByCat[cat];
+  events.slice().sort((a, b) => a._startFrac - b._startFrac).forEach(ev => {
+    // Busca un carril donde el evento anterior ya haya terminado
+    let lane = laneEnds.findIndex(end => end <= ev._startFrac - 0.002);
+    
+    // Si no hay carriles libres, crea uno nuevo
+    if (lane === -1) lane = laneEnds.length;
+    
+    laneEnds[lane] = ev._endFrac;
+    result.push({ ...ev, _lane: lane });
   });
 
-  return { events: result, totalLanes: Math.max(1, colOffset), orderedCats, colOffsetByCat, subLanesByCat };
+  return { events: result, totalLanes: Math.max(1, laneEnds.length) };
 }
 
 // Cuando dos eventos puntuales (rombos) caen en fechas muy cercanas dentro del
@@ -304,7 +283,7 @@ function FilterPanel({ categorias, activeCats, onToggleCat, allTags, activeTags,
 
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 const HEADER_H = 26;
-const PADDING_TOP = 16 + HEADER_H;
+const PADDING_TOP = 16;
 const PADDING_BOTTOM = 16;
 const MONTH_LABEL_W = 44;
 const AXIS_W = 2;
@@ -313,6 +292,7 @@ const LANE_W = 150;
 const MIN_H_FOR_TEXT = 22;
 
 function Timeline({ eventos, categorias, onEventClick }) {
+  const TOTAL_HEIGHT = 5000;
   const containerRef = useRef(null);
   const [containerH, setContainerH] = useState(800);
 
@@ -335,7 +315,7 @@ function Timeline({ eventos, categorias, onEventClick }) {
 
   const yearStart = new Date(year, 0, 1);
   const yearEnd   = new Date(year, 11, 31, 23, 59, 59);
-  const usableH   = containerH - PADDING_TOP - PADDING_BOTTOM;
+  const usableH   = TOTAL_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 
   const catMap = useMemo(() => {
     const m = {};
@@ -346,7 +326,7 @@ function Timeline({ eventos, categorias, onEventClick }) {
   const fracToY = f => PADDING_TOP + f * usableH;
 
   // Procesar eventos
-  const { feriados, withLanes, usedLanes, colOffsetByCat, subLanesByCat } = useMemo(() => {
+  const { feriados, withLanes, usedLanes } = useMemo(() => {
     const processed = eventos
       .map(ev => {
         const start = parseLocalDate(ev.fecha_inicio) ?? parseLocalDate(ev.fecha_termino);
@@ -354,6 +334,7 @@ function Timeline({ eventos, categorias, onEventClick }) {
         if (!start) return null;
         const sf = dateToFraction(start, yearStart, yearEnd);
         const ef = dateToFraction(end,   yearStart, yearEnd);
+        
         return { ...ev, _startFrac: sf, _endFrac: Math.max(ef, sf + 0.002),
                  _color: catMap[ev.categoria]?.color || "#9CA3AF" };
       })
@@ -362,10 +343,12 @@ function Timeline({ eventos, categorias, onEventClick }) {
 
     const feriados = processed.filter(e => e.categoria === "feriado");
     const normales = processed.filter(e => e.categoria !== "feriado");
-    const categoryOrder = categorias.map(c => c.id).filter(id => id !== "feriado");
-    const { events: withLanes, totalLanes, colOffsetByCat, subLanesByCat } = assignLanes(normales, categoryOrder);
-    return { feriados, withLanes, usedLanes: totalLanes, colOffsetByCat, subLanesByCat };
-  }, [eventos, catMap, yearStart, yearEnd, categorias]);
+    
+    // Llamamos al nuevo assignLanes
+    const { events: withLanes, totalLanes } = assignLanes(normales);
+    
+    return { feriados, withLanes, usedLanes: totalLanes };
+  }, [eventos, catMap, yearStart, yearEnd]);
 
   const totalW = MONTH_LABEL_W + AXIS_W + FERIADO_W + LANE_W * usedLanes;
 
@@ -381,28 +364,8 @@ function Timeline({ eventos, categorias, onEventClick }) {
   }, [withLanes, usableH]);
 
   return (
-    <Box ref={containerRef} position="relative" w="100%" h="100%" overflowX="auto" overflowY="hidden">
+    <Box ref={containerRef} position="relative" w="100%" h="100%" overflowX="auto" overflowY="auto">
       <Box position="relative" style={{ minWidth: totalW, height: "100%" }}>
-
-        {/* Encabezados de columna (una columna fija por categoría) */}
-        {Object.keys(colOffsetByCat).map(catId => {
-          const cat = catMap[catId];
-          const left = MONTH_LABEL_W + AXIS_W + FERIADO_W + colOffsetByCat[catId] * LANE_W;
-          const width = (subLanesByCat[catId] ?? 1) * LANE_W;
-          return (
-            <Box key={catId} position="absolute"
-                 style={{ left, width, top: 2, height: HEADER_H, zIndex: 4 }}
-                 display="flex" alignItems="center" justifyContent="center" gap="6px">
-              <Box w="7px" h="7px" borderRadius="2px" flexShrink={0}
-                   style={{ background: cat?.color || "#9CA3AF" }} />
-              <Text fontSize="10px" fontWeight="700" color="gray.500" letterSpacing="0.02em"
-                    style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                             maxWidth: width - 18, textTransform: "uppercase" }}>
-                {cat?.label || catId}
-              </Text>
-            </Box>
-          );
-        })}
 
         {/* Eje vertical */}
         <Box position="absolute" bg="gray.200" style={{
@@ -410,19 +373,38 @@ function Timeline({ eventos, categorias, onEventClick }) {
           bottom: PADDING_BOTTOM, width: 2
         }} />
 
-        {/* Marcas de mes */}
+        {/* Marcas de mes y días intermedios (10 y 20) */}
         {MESES.map((label, i) => {
-          const y = fracToY(dateToFraction(new Date(year, i, 1), yearStart, yearEnd));
+          const y1 = fracToY(dateToFraction(new Date(year, i, 1), yearStart, yearEnd));
+          const y10 = fracToY(dateToFraction(new Date(year, i, 10), yearStart, yearEnd));
+          const y20 = fracToY(dateToFraction(new Date(year, i, 20), yearStart, yearEnd));
+          
           return (
-            <Box key={label} position="absolute" style={{ top: y, left: 0, right: 0 }}>
-              <Box position="absolute" style={{ left: MONTH_LABEL_W, right: 0, top: 0, height: 1,
-                background: i === 0 ? "#D1D5DB" : "#F3F4F6" }} />
-              <Box position="absolute" style={{ left: MONTH_LABEL_W - 5, top: -3, width: 10, height: 6,
-                background: "#D1D5DB", borderRadius: 1 }} />
-              <Text position="absolute" fontSize="11px" fontWeight="700" color="gray.500"
-                    style={{ right: MONTH_LABEL_W - 38, top: -8, width: 36, textAlign: "right" }}>
-                {label}
-              </Text>
+            <Box key={label}>
+              <Box position="absolute" style={{ top: y1, left: 0, right: 0 }}>
+                <Text position="absolute" fontSize="11px" fontWeight="700" color="gray.600"
+                      style={{ left: 0, top: -8, width: MONTH_LABEL_W - 12, textAlign: "right" }}>
+                  {label}
+                </Text>
+                <Box position="absolute" style={{ left: MONTH_LABEL_W - 4, top: -1, width: 8, height: 2,
+                  background: "#9CA3AF", borderRadius: 1 }} />
+                <Box position="absolute" style={{ left: MONTH_LABEL_W, right: 0, top: 0, height: 1,
+                  background: i === 0 ? "#9CA3AF" : "#E5E7EB" }} />
+              </Box>
+
+              <Box position="absolute" style={{ top: y10, left: 0, right: 0 }}>
+                <Box position="absolute" style={{ left: MONTH_LABEL_W - 2, top: 0, width: 4, height: 1,
+                  background: "#D1D5DB" }} />
+                <Box position="absolute" style={{ left: MONTH_LABEL_W, right: 0, top: 0, height: 1,
+                  borderTop: "1px dashed #E5E7EB" }} />
+              </Box>
+
+              <Box position="absolute" style={{ top: y20, left: 0, right: 0 }}>
+                <Box position="absolute" style={{ left: MONTH_LABEL_W - 2, top: 0, width: 4, height: 1,
+                  background: "#D1D5DB" }} />
+                <Box position="absolute" style={{ left: MONTH_LABEL_W, right: 0, top: 0, height: 1,
+                  borderTop: "1px dashed #E5E7EB" }} />
+              </Box>
             </Box>
           );
         })}
@@ -598,6 +580,8 @@ export default function Home() {
            display="flex" alignItems="center" justifyContent="space-between"
            position="sticky" top="0" zIndex="100"
            style={{ borderBottom: "1px solid #F3F4F6", boxShadow: "0 1px 0 rgba(0,0,0,0.06)" }}>
+
+        {/* Título y Logo */}
         <Flex align="center" gap="12px">
           <Box w="32px" h="32px" bg="gray.900" borderRadius="8px"
                display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
@@ -613,6 +597,32 @@ export default function Home() {
             <Text fontSize="11px" color="gray.400" fontWeight="500" mt="1px">{new Date().getFullYear()}</Text>
           </Box>
         </Flex>
+
+        {/* Leyenda */}
+        {categorias.length > 0 && (
+          <Flex align="center" gap="16px" flexWrap="wrap" flex="1" ml={{ base: 0, md: "20px" }}>
+            <Text fontSize="10px" fontWeight="700" color="gray.400" letterSpacing="0.08em" textTransform="uppercase">
+              Leyenda:
+            </Text>
+            
+            {/* Iteramos por las categorías dinámicas */}
+            {categorias.map(cat => (
+              <Flex key={cat.id} align="center" gap="6px">
+                <Box w="10px" h="10px" bg={cat.color} borderRadius="2px" flexShrink={0} />
+                <Text fontSize="11px" color="gray.600" fontWeight="600">{cat.label}</Text>
+              </Flex>
+            ))}
+            
+            {/* Categoría fija: Feriado */}
+            <Flex align="center" gap="6px">
+              <Box w="10px" h="10px" bg="yellow.400" borderRadius="full" flexShrink={0}
+                   style={{ border: "2px solid #F59E0B" }} />
+              <Text fontSize="11px" color="gray.600" fontWeight="600">Feriado</Text>
+            </Flex>
+          </Flex>
+        )}
+        
+        {/* Indicador de estado */}
         <Flex align="center" gap="8px">
           <Box w="8px" h="8px" bg="green.400" borderRadius="full" />
           <Text fontSize="11px" color="gray.400" fontWeight="500">Datos en vivo</Text>
@@ -674,28 +684,6 @@ export default function Home() {
                   : `${filtered.length} de ${eventos.length} eventos`}
               </Text>
             </Box>
-
-            {categorias.length > 0 && (
-              <Box mt="24px" px="4px">
-                <Text fontSize="11px" fontWeight="700" color="gray.400" letterSpacing="0.08em"
-                      textTransform="uppercase" mb="10px">
-                  Leyenda
-                </Text>
-                <VStack align="stretch" gap="6px">
-                  {categorias.map(cat => (
-                    <Flex key={cat.id} align="center" gap="8px">
-                      <Box w="10px" h="10px" bg={cat.color} borderRadius="2px" flexShrink={0} />
-                      <Text fontSize="12px" color="gray.600" fontWeight="500">{cat.label}</Text>
-                    </Flex>
-                  ))}
-                  <Flex align="center" gap="8px">
-                    <Box w="10px" h="10px" bg="yellow.400" borderRadius="full" flexShrink={0}
-                         style={{ border: "2px solid #F59E0B" }} />
-                    <Text fontSize="12px" color="gray.600" fontWeight="500">Feriado</Text>
-                  </Flex>
-                </VStack>
-              </Box>
-            )}
           </Box>
 
           {/* 🌸 Timeline (ahora ocupa toooodo el espacio disponible) */}
