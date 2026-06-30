@@ -1,8 +1,14 @@
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
+import { promises as fs } from "fs";
+import path from "path";
 
 const SHEET_EVENTOS = "eventos";
 const SHEET_CATEGORIAS = "categorias";
+
+// 📁 Ruta del CSV: <raíz del proyecto Next.js>/data/historial.csv
+const RUTA_CSV = path.join(process.cwd(), "data", "historial.csv");
+const CABECERA_CSV = "fecha_hora,etiqueta,texto,ip\n";
 
 async function getSheetsClient() {
   const auth = new google.auth.GoogleAuth({
@@ -24,11 +30,7 @@ function parseFecha(str) {
 }
 
 function rowToEvento(row, index) {
-  // Columnas: A=categoria B=nombre C=descripcion D=fecha_inicio E=fecha_termino F=url G=tag1 H=tag2 I=tag3
-  const tags = [row[6], row[7], row[8]]
-    .map((t) => t?.trim())
-    .filter(Boolean);
-
+  const tags = [row[6], row[7], row[8]].map((t) => t?.trim()).filter(Boolean);
   return {
     id: index + 2,
     categoria: row[0]?.trim() ?? "",
@@ -52,12 +54,10 @@ function rowToCategoria(row) {
 async function readEventos(sheets) {
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: process.env.SPREADSHEET_ID,
-    range: `${SHEET_EVENTOS}!A2:I`, // extendido hasta columna I para incluir tag1, tag2, tag3
+    range: `${SHEET_EVENTOS}!A2:I`,
   });
   const rows = res.data.values ?? [];
-  return rows
-    .map((row, i) => rowToEvento(row, i))
-    .filter((e) => e.categoria !== "" && e.nombre !== "");
+  return rows.map((row, i) => rowToEvento(row, i)).filter((e) => e.categoria !== "" && e.nombre !== "");
 }
 
 async function readCategorias(sheets) {
@@ -84,19 +84,49 @@ async function getData() {
   const sheets = await getSheetsClient();
   const now = Date.now();
   const cacheExpired = !cache || now - cache.fetchedAt > CACHE_TTL_MS;
-
   if (!cacheExpired) {
     const currentRowCount = await getRowCount(sheets);
     if (currentRowCount === cache.rowCount) return cache;
   }
-
-  const [eventos, categorias] = await Promise.all([
-    readEventos(sheets),
-    readCategorias(sheets),
-  ]);
-
+  const [eventos, categorias] = await Promise.all([readEventos(sheets), readCategorias(sheets)]);
   cache = { eventos, categorias, rowCount: eventos.length, fetchedAt: now };
   return cache;
+}
+
+// 🧼 Escapa un valor para que no rompa el formato CSV
+// (si trae comas, comillas o saltos de línea, lo encierra entre comillas dobles)
+function escaparCampoCsv(valor) {
+  const texto = String(valor ?? "");
+  if (/[",\n]/.test(texto)) {
+    return `"${texto.replace(/"/g, '""')}"`;
+  }
+  return texto;
+}
+
+// 💾 Guarda una línea del log de clics en historial.csv
+async function guardarEnCsv(logCompleto) {
+  const carpeta = path.dirname(RUTA_CSV);
+  await fs.mkdir(carpeta, { recursive: true });
+
+  // Si el archivo no existe todavía, lo creamos con la cabecera
+  let archivoExiste = true;
+  try {
+    await fs.access(RUTA_CSV);
+  } catch {
+    archivoExiste = false;
+  }
+  if (!archivoExiste) {
+    await fs.writeFile(RUTA_CSV, CABECERA_CSV, "utf8");
+  }
+
+  const fila = [
+    escaparCampoCsv(logCompleto.fecha_hora),
+    escaparCampoCsv(logCompleto.etiqueta),
+    escaparCampoCsv(logCompleto.texto),
+    escaparCampoCsv(logCompleto.ip),
+  ].join(",");
+
+  await fs.appendFile(RUTA_CSV, fila + "\n", "utf8");
 }
 
 export async function GET() {
@@ -112,17 +142,16 @@ export async function GET() {
 export async function POST(request) {
   try {
     const datosDelClic = await request.json();
-
-    // Vercel lee la IP pública del usuario en los headers
     const ipUsuario = request.headers.get("x-forwarded-for") || "127.0.0.1";
-
     const logCompleto = {
       ...datosDelClic,
-      ip: ipUsuario.split(',')[0].trim()
+      ip: ipUsuario.split(",")[0].trim(),
     };
 
-    // Imprime el log de clics en tu terminal de Linux
     console.log("💾 [CLIC DETECTADO EN EL SERVIDOR]:", logCompleto);
+
+    // 📝 Guardamos el clic en el historial.csv
+    await guardarEnCsv(logCompleto);
 
     return NextResponse.json({ success: true });
   } catch (err) {
