@@ -2,7 +2,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useMemo, useCallback, useEffect, useRef, useLayoutEffect } from "react";
-import { Box, Text, Flex, VStack } from "@chakra-ui/react";
+import { Box, Text, Flex, VStack, useBreakpointValue } from "@chakra-ui/react";
 
 // ─── Utilidades de fecha ──────────────────────────────────────────────────────
 
@@ -282,16 +282,14 @@ function FilterPanel({ categorias, activeCats, onToggleCat, allTags, activeTags,
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const HEADER_H = 26;
 const PADDING_TOP = 16;
 const PADDING_BOTTOM = 16;
-const MONTH_LABEL_W = 44;
+const MONTH_LABEL_W = 50;
 const AXIS_W = 2;
-const FERIADO_W = 70;
-const LANE_W = 150;
 const MIN_H_FOR_TEXT = 22;
 
 function Timeline({ eventos, categorias, onEventClick }) {
+  const LANE_W = useBreakpointValue({ base: 80, md: 150 }) || 150;
   const TOTAL_HEIGHT = 5000;
   const containerRef = useRef(null);
   const [containerH, setContainerH] = useState(800);
@@ -350,14 +348,9 @@ function Timeline({ eventos, categorias, onEventClick }) {
     return { feriados, withLanes, usedLanes: totalLanes };
   }, [eventos, catMap, yearStart, yearEnd]);
 
-  const totalW = MONTH_LABEL_W + AXIS_W + FERIADO_W + LANE_W * usedLanes;
+  const totalW = MONTH_LABEL_W + AXIS_W + 16 + LANE_W * usedLanes;
 
   // Posiciones ajustadas para que marcadores puntuales muy cercanos en fecha
-  // (dentro del mismo carril) no queden uno encima del otro.
-  const feriadoTops = useMemo(
-    () => staggerByLane(feriados, () => "feriado", ev => fracToY(ev._startFrac), 16),
-    [feriados, usableH]
-  );
   const punctualTops = useMemo(() => {
     const soloPuntuales = withLanes.filter(ev => fracToY(ev._endFrac) - fracToY(ev._startFrac) < 10);
     return staggerByLane(soloPuntuales, ev => ev._lane, ev => fracToY(ev._startFrac), 16);
@@ -369,8 +362,11 @@ function Timeline({ eventos, categorias, onEventClick }) {
 
         {/* Eje vertical */}
         <Box position="absolute" bg="gray.200" style={{
-          left: MONTH_LABEL_W + AXIS_W / 2, top: PADDING_TOP,
-          bottom: PADDING_BOTTOM, width: 2
+          left: MONTH_LABEL_W - 1, 
+          top: 0,
+          height: TOTAL_HEIGHT,
+          width: 2,
+          zIndex: 0
         }} />
 
         {/* Marcas de mes y días intermedios (10 y 20) */}
@@ -410,26 +406,38 @@ function Timeline({ eventos, categorias, onEventClick }) {
         })}
 
         {/* Feriados */}
-        {feriados.map(ev => (
-          <Box key={ev.id} position="absolute" display="flex" alignItems="center" gap="4px"
-               style={{ top: (feriadoTops[ev.id] ?? fracToY(ev._startFrac)) - 6, left: MONTH_LABEL_W + AXIS_W + 4,
-                        cursor: "pointer", zIndex: 3 }}
-               onClick={() => onEventClick(ev)} title={ev.nombre}>
-            <Box w="8px" h="8px" bg="yellow.400" borderRadius="full" flexShrink={0}
-                 style={{ border: "2px solid #F59E0B" }} />
-            <Text fontSize="10px" fontWeight="600" color="yellow.800"
-                  style={{ maxWidth: FERIADO_W - 16, overflow: "hidden",
-                           textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {ev.nombre}
-            </Text>
-          </Box>
-        ))}
+        {feriados.map(ev => {
+          const y = fracToY(ev._startFrac);
+          
+          return (
+            <Box key={ev.id} position="absolute" 
+                 style={{ top: y, left: 0, right: 0, zIndex: 3, cursor: "pointer" }}
+                 onClick={() => onEventClick(ev)} 
+                 title={ev.nombre}>
+              <Box position="absolute" style={{ left: MONTH_LABEL_W, right: 0, top: 0, height: 1 }} 
+                   bg="#FBBF24" opacity="0.4" />
+              <Box position="absolute" style={{ left: MONTH_LABEL_W - 4, top: -4, width: 8, height: 8,
+                background: "#FBBF24", borderRadius: "50%", border: "2px solid white",
+                boxShadow: "0 0 0 1px #F59E0B" }} />
+              <Text position="absolute" fontSize="9px" fontWeight="800" color="yellow.600"
+                    px="4px" py="1px" 
+                    style={{ 
+                      right: `calc(100% - ${MONTH_LABEL_W - 8}px)`, 
+                      top: -7, 
+                      whiteSpace: "nowrap",
+                      background: "transparent"
+                    }}>
+                Feriado
+              </Text>
+            </Box>
+          );
+        })}
 
         {/* Eventos en lanes */}
         {withLanes.map(ev => {
           const top    = fracToY(ev._startFrac);
           const height = Math.max(8, fracToY(ev._endFrac) - top);
-          const left   = MONTH_LABEL_W + AXIS_W + FERIADO_W + ev._lane * LANE_W + 2;
+          const left   = MONTH_LABEL_W + AXIS_W + 16 + ev._lane * LANE_W;
           const isPunctual = height < 10;
 
           if (isPunctual) {
@@ -493,13 +501,20 @@ function Timeline({ eventos, categorias, onEventClick }) {
           if (today.getFullYear() !== year) return null;
           const y = fracToY(dateToFraction(today, yearStart, yearEnd));
           return (
-            <Box key="today" position="absolute" style={{ top: y, left: MONTH_LABEL_W, right: 0, zIndex: 5 }}>
-              <Box h="2px" bg="red.400" opacity="0.8" />
-              <Box position="absolute" style={{ left: -4, top: -4, width: 10, height: 10,
+            <Box key="today" position="absolute" style={{ top: y, left: 0, right: 0, zIndex: 5 }}>
+              <Box position="absolute" style={{ left: MONTH_LABEL_W, right: 0, top: 0, height: 2 }} 
+                   bg="red.400" opacity="0.8" />
+              <Box position="absolute" style={{ left: MONTH_LABEL_W - 4, top: -4, width: 10, height: 10,
                 background: "#F87171", borderRadius: "50%", border: "2px solid white",
                 boxShadow: "0 0 0 2px #FCA5A5" }} />
-              <Text position="absolute" fontSize="10px" fontWeight="700" color="red.500"
-                    bg="white" px="4px" borderRadius="3px" style={{ left: 10, top: -9 }}>
+              <Text position="absolute" fontSize="10px" fontWeight="800" color="red.500"
+                    px="4px" py="1px"
+                    style={{ 
+                      right: `calc(100% - ${MONTH_LABEL_W - 8}px)`, 
+                      top: -8, 
+                      background: "transparent",
+                      whiteSpace: "nowrap"
+                    }}>
                 hoy
               </Text>
             </Box>
@@ -521,6 +536,7 @@ export default function Home() {
   const [activeTags, setActiveTags] = useState(new Set());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLegendOpen, setIsLegendOpen]   = useState(false);
 
   useEffect(() => {
     fetch("/api/events")
@@ -575,37 +591,61 @@ export default function Home() {
   return (
     <Flex direction="column" h="100vh" bg="gray.50" overflow="hidden">
 
-      {/* Header */}
-      <Box as="header" bg="white" h="64px" px="40px"
-           display="flex" alignItems="center" justifyContent="space-between"
+      {/* Header Responsive */}
+      <Box as="header" bg="white" minH="64px" 
+           px={{ base: "16px", md: "40px" }} py="12px"
+           display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap="16px"
            position="sticky" top="0" zIndex="100"
            style={{ borderBottom: "1px solid #F3F4F6", boxShadow: "0 1px 0 rgba(0,0,0,0.06)" }}>
+        
+        {/* Título, Logo y Botón de Leyenda para Móviles */}
+        <Flex align="center" justify="space-between" w={{ base: "100%", md: "auto" }} flexShrink={0}>
+          <Flex align="center" gap="12px">
+            <Box w="32px" h="32px" bg="gray.900" borderRadius="8px"
+                 display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="2" width="14" height="13" rx="2" stroke="white" strokeWidth="1.5"/>
+                <line x1="5" y1="0" x2="5" y2="4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="11" y1="0" x2="11" y2="4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="1" y1="7" x2="15" y2="7" stroke="white" strokeWidth="1.5"/>
+              </svg>
+            </Box>
+            <Box>
+              <Text fontSize="15px" fontWeight="800" color="gray.900" lineHeight="1">Calendario Académico</Text>
+              <Text fontSize="11px" color="gray.400" fontWeight="500" mt="1px">{new Date().getFullYear()}</Text>
+            </Box>
+          </Flex>
 
-        {/* Título y Logo */}
-        <Flex align="center" gap="12px">
-          <Box w="32px" h="32px" bg="gray.900" borderRadius="8px"
-               display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1" y="2" width="14" height="13" rx="2" stroke="white" strokeWidth="1.5"/>
-              <line x1="5" y1="0" x2="5" y2="4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="11" y1="0" x2="11" y2="4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="1" y1="7" x2="15" y2="7" stroke="white" strokeWidth="1.5"/>
+          {/* Botón que SOLO se ve en celulares para desplegar la leyenda */}
+          <Box as="button" display={{ base: "flex", md: "none" }} 
+               alignItems="center" gap="6px" px="10px" py="6px" 
+               borderRadius="6px" bg="gray.100" color="gray.600"
+               onClick={() => setIsLegendOpen(!isLegendOpen)}>
+            <Text fontSize="11px" fontWeight="700">Leyenda</Text>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" 
+                 style={{ transform: isLegendOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+              <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
-          </Box>
-          <Box>
-            <Text fontSize="15px" fontWeight="800" color="gray.900" lineHeight="1">Calendario Académico</Text>
-            <Text fontSize="11px" color="gray.400" fontWeight="500" mt="1px">{new Date().getFullYear()}</Text>
           </Box>
         </Flex>
 
         {/* Leyenda */}
         {categorias.length > 0 && (
-          <Flex align="center" gap="16px" flexWrap="wrap" flex="1" ml={{ base: 0, md: "20px" }}>
-            <Text fontSize="10px" fontWeight="700" color="gray.400" letterSpacing="0.08em" textTransform="uppercase">
-              Leyenda:
-            </Text>
+          <Flex align="center" gap="16px" flexWrap="wrap" flex="1" 
+                ml={{ base: 0, md: "20px" }}
+                display={{ base: isLegendOpen ? "flex" : "none", md: "flex" }} 
+                w={{ base: "100%", md: "auto" }}>
             
-            {/* Iteramos por las categorías dinámicas */}
+            <Flex align="center" gap="6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              <Text fontSize="10px" fontWeight="700" color="gray.400" letterSpacing="0.08em" textTransform="uppercase">
+                Leyenda:
+              </Text>
+            </Flex>
+            
             {categorias.map(cat => (
               <Flex key={cat.id} align="center" gap="6px">
                 <Box w="10px" h="10px" bg={cat.color} borderRadius="2px" flexShrink={0} />
@@ -613,7 +653,6 @@ export default function Home() {
               </Flex>
             ))}
             
-            {/* Categoría fija: Feriado */}
             <Flex align="center" gap="6px">
               <Box w="10px" h="10px" bg="yellow.400" borderRadius="full" flexShrink={0}
                    style={{ border: "2px solid #F59E0B" }} />
@@ -621,9 +660,9 @@ export default function Home() {
             </Flex>
           </Flex>
         )}
-        
-        {/* Indicador de estado */}
-        <Flex align="center" gap="8px">
+
+        {/* Indicador de estado (Se oculta en celulares para ahorrar espacio) */}
+        <Flex align="center" gap="8px" flexShrink={0} display={{ base: "none", md: "flex" }}>
           <Box w="8px" h="8px" bg="green.400" borderRadius="full" />
           <Text fontSize="11px" color="gray.400" fontWeight="500">Datos en vivo</Text>
         </Flex>
@@ -647,15 +686,33 @@ export default function Home() {
       ) : (
 <Flex flex="1" overflow="hidden" position="relative">
 
-          {/* 🌸 Zona invisible para detectar el mouse y ABRIR el menú */}
+          {/* Pestaña visible en el borde izquierdo para ABRIR el menú de categorías/filtros */}
+          <Flex 
+            position="absolute" left="0" top="50%" transform="translateY(-50%)" 
+            w="28px" h="80px" zIndex="150"
+            bg="white" border="1px solid #E5E7EB" borderLeft="none" 
+            style={{ borderRadius: "0 12px 12px 0", cursor: "pointer", boxShadow: "3px 0 10px rgba(0,0,0,0.05)" }}
+            alignItems="center" justifyContent="center"
+            onMouseEnter={() => setIsSidebarOpen(true)}
+            display={isSidebarOpen ? "none" : "flex"}
+            color="gray.400"
+            _hover={{ color: "gray.600", bg: "gray.50" }}
+            title="Abrir categorías y filtros"
+          >
+            {/* Icono de flecha (Chevron) */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Flex>
+
+          {/* Mantenemos una línea invisible en todo el borde para que siga siendo fácil de abrir al deslizar el mouse rápidamente */}
           <Box 
-            position="absolute" left="0" top="0" bottom="0" w="24px" zIndex="150"
+            position="absolute" left="0" top="0" bottom="0" w="10px" zIndex="149"
             onMouseEnter={() => setIsSidebarOpen(true)}
             display={isSidebarOpen ? "none" : "block"} 
-            style={{ cursor: "e-resize" }}
           />
 
-          {/* 🌸 Sidebar Desplegable (flota por encima del calendario) */}
+          {/* Sidebar Desplegable (flota por encima del calendario) */}
           <Box 
             position="absolute"
             top="0" bottom="0"
@@ -686,7 +743,7 @@ export default function Home() {
             </Box>
           </Box>
 
-          {/* 🌸 Timeline (ahora ocupa toooodo el espacio disponible) */}
+          {/* Timeline (ahora ocupa toooodo el espacio disponible) */}
           <Box flex="1" w="100%" overflow="hidden" position="relative">
             {filtered.length === 0 ? (
               <Flex flex="1" h="100%" direction="column" align="center" justify="center" gap="12px">
